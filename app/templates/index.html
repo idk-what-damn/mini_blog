@@ -1,0 +1,328 @@
+{ % extends
+"base.html" %}
+
+{ % block
+title %}Главная - Мини - Блог
+{ % endblock %}
+
+{ % block
+content %}
+< div
+
+
+class ="row" >
+
+< div
+
+
+class ="col-lg-8" >
+
+< div
+
+
+class ="d-flex justify-content-between align-items-center mb-4" >
+
+< h1
+
+
+class ="h2" > Последние статьи < / h1 >
+
+
+{ % if current_user %}
+< a
+href = "/articles/new"
+
+
+class ="btn btn-primary" >
+
+< i
+
+
+class ="bi bi-plus-lg" > < / i > Новая статья
+
+< / a >
+{ % endif %}
+< / div >
+
+{ % if not articles %}
+< div
+
+
+class ="alert alert-info" >
+
+< i
+
+
+class ="bi bi-info-circle" > < / i > Пока нет ни одной статьи.
+
+
+{ % if current_user %}
+< a
+href = "/articles/new"
+
+
+class ="alert-link" > Создайте первую! < / a >
+
+
+{ % else %}
+< a
+href = "/register"
+
+
+class ="alert-link" > Зарегистрируйтесь < / a > чтобы создать статью.
+
+
+{ % endif %}
+< / div >
+{ % else %}
+{ %
+for article in articles %}
+< div
+
+
+class ="card mb-4 shadow-sm" >
+
+< div
+
+
+class ="card-body" >
+
+< div
+
+
+class ="d-flex justify-content-between align-items-start" >
+
+< div >
+< h5
+
+
+class ="card-title" >
+
+< a
+href = "/articles/{{ article.id }}"
+
+
+class ="text-decoration-none" >
+
+
+{{article.title}}
+< / a >
+< / h5 >
+< p
+
+
+class ="card-text text-muted" >
+
+
+{{article.content[:200]}}...
+< / p >
+< / div >
+{ % if article.tags %}
+< div
+
+
+class ="ms-3" >
+
+
+{ %
+for tag in article.tags[:3] %}
+< span
+
+
+class ="badge bg-secondary" > {{tag.name}} < / span >
+
+
+{ % endfor %}
+< / div >
+{ % endif %}
+< / div >
+
+< div
+
+
+class ="d-flex justify-content-between align-items-center mt-3" >
+
+< small
+
+
+class ="text-muted" >
+
+< i
+
+
+class ="bi bi-person" > < / i > {{article.author.username if article.author else 'Неизвестный автор'}}
+
+< i
+
+
+class ="bi bi-calendar ms-2" > < / i > {{article.created_at.strftime('%d.%m.%Y %H:%M')}}
+
+< / small >
+< a
+href = "/articles/{{ article.id }}"
+
+
+class ="btn btn-outline-primary btn-sm" >
+
+
+Читать < i
+
+
+class ="bi bi-arrow-right" > < / i >
+
+< / a >
+< / div >
+< / div >
+< / div >
+{ % endfor %}
+
+< div
+
+
+class ="text-center mt-4" >
+
+< a
+href = "/articles"
+
+
+class ="btn btn-outline-primary" >
+
+< i
+
+
+class ="bi bi-list" > < / i > Все статьи
+
+< / a >
+< / div >
+{ % endif %}
+< / div >
+
+< div
+
+
+class ="col-lg-4" >
+
+< div
+
+
+class ="card mb-4 shadow-sm" >
+
+< div
+
+
+class ="card-body" >
+
+< h5
+
+
+class ="card-title" >
+
+< i
+
+
+class ="bi bi-search" > < / i > Поиск статей
+
+< / h5 >
+< form
+action = "/articles"
+method = "get"
+
+
+class ="d-flex" >
+
+< input
+type = "text"
+name = "search"
+
+
+class ="form-control me-2" placeholder="Введите запрос..." >
+
+< button
+type = "submit"
+
+
+class ="btn btn-primary" >
+
+< i
+
+
+class ="bi bi-search" > < / i >
+
+< / button >
+< / form >
+< / div >
+< / div >
+
+{ % if tags %}
+< div
+
+
+class ="card mb-4 shadow-sm" >
+
+< div
+
+
+class ="card-body" >
+
+< h5
+
+
+class ="card-title" >
+
+< i
+
+
+class ="bi bi-tags" > < / i > Популярные теги
+
+< / h5 >
+< div
+
+
+class ="d-flex flex-wrap gap-2" >
+
+
+{ %
+for tag in tags %}
+< a
+href = "/articles?tag={{ tag.name }}"
+
+
+class ="badge bg-info text-decoration-none" >
+
+
+{{tag.name}}
+< / a >
+{ % endfor %}
+< / div >
+< / div >
+< / div >
+{ % endif %}
+
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-graph-up"></i> Статистика
+                </h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-newspaper text-primary"></i>
+                        Всего статей: <strong>{{ articles|length }}</strong>
+                    </li>
+                    {% if current_user %}
+                    <li class="mb-2">
+                        <i class="bi bi-person text-success"></i>
+                        Вы вошли как: <strong>{{ current_user.username }}</strong>
+                    </li>
+                    {% else %}
+                    <li class="mb-2">
+                        <i class="bi bi-person-plus text-warning"></i>
+                        <a href="/register" class="text-decoration-none">Зарегистрируйтесь</a> для создания статей
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

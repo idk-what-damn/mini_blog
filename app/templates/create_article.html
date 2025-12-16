@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Новая статья - Мини-Блог{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-lg">
+            <div class="card-body p-4">
+                <h2 class="text-center mb-4">
+                    <i class="bi bi-pencil-square"></i> Новая статья
+                </h2>
+
+                <form action="/api/articles" method="post">
+                    <div class="mb-4">
+                        <label for="title" class="form-label">
+                            <i class="bi bi-type"></i> Заголовок статьи
+                        </label>
+                        <input type="text" class="form-control form-control-lg"
+                               id="title" name="title" required
+                               placeholder="Введите заголовок статьи" maxlength="200">
+                        <div class="form-text">
+                            Максимум 200 символов
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="content" class="form-label">
+                            <i class="bi bi-text-paragraph"></i> Содержание
+                        </label>
+                        <textarea class="form-control" id="content" name="content"
+                                  rows="12" required
+                                  placeholder="Напишите содержание вашей статьи..."></textarea>
+                        <div class="form-text">
+                            Поддерживается Markdown разметка
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="tags" class="form-label">
+                            <i class="bi bi-tags"></i> Теги
+                        </label>
+                        <input type="text" class="form-control" id="tags" name="tags"
+                               placeholder="python, fastapi, web (через запятую)">
+                        <div class="form-text">
+                            Введите теги через запятую. Максимум 5 тегов.
+                        </div>
+
+                        <!-- Популярные теги -->
+                        {% if tags %}
+                        <div class="mt-3">
+                            <small class="text-muted">Популярные теги:</small>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                {% for tag in tags %}
+                                <button type="button" class="btn btn-outline-secondary btn-sm add-tag"
+                                        data-tag="{{ tag.name }}">
+                                    {{ tag.name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="/articles" class="btn btn-outline-secondary me-md-2">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Опубликовать
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+</script>
+{% endblock %}
+{% endblock %}
