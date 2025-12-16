@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} - Мини-Блог{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Главная</a></li>
+                <li class="breadcrumb-item"><a href="/articles">Статьи</a></li>
+                <li class="breadcrumb-item active">{{ article.title|truncate(30) }}</li>
+            </ol>
+        </nav>
+
+        <article class="card shadow-lg mb-5">
+            <div class="card-body">
+                <header class="mb-4">
+                    <h1 class="card-title display-6">{{ article.title }}</h1>
+
+                    <div class="d-flex flex-wrap align-items-center text-muted mb-3">
+                        <div class="d-flex align-items-center me-4">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span>{{ article.author.username if article.author else 'Неизвестный автор' }}</span>
+                        </div>
+                        <div class="d-flex align-items-center me-4">
+                            <i class="bi bi-calendar3 me-2"></i>
+                            <span>{{ article.created_at.strftime('%d %B %Y в %H:%M') }}</span>
+                        </div>
+                        {% if article.updated_at %}
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-pencil me-2"></i>
+                            <span>Обновлено: {{ article.updated_at.strftime('%d %B %Y') }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if article.tags %}
+                    <div class="mb-4">
+                        {% for tag in article.tags %}
+                        <a href="/articles?tag={{ tag.name }}" class="badge bg-info text-decoration-none me-2">
+                            <i class="bi bi-tag"></i> {{ tag.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </header>
+
+                <div class="article-content mb-5">
+                    {{ article.content|replace('\n', '<br>')|safe }}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center border-top pt-4">
+                    <div>
+                        <a href="/articles" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> К списку статей
+                        </a>
+                    </div>
+
+                    {% if current_user and current_user.id == article.author_id %}
+                    <div class="btn-group">
+                        <a href="#" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Редактировать
+                        </a>
+                        <form action="/api/articles/{{ article.id }}/delete" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-outline-danger"
+                                    onclick="return confirm('Удалить эту статью?')">
+                                <i class="bi bi-trash"></i> Удалить
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h3 class="card-title mb-4">
+                    <i class="bi bi-chat-text"></i> Комментарии
+                    <span class="badge bg-secondary">{{ comments|length }}</span>
+                </h3>
+
+
+                {% if current_user %}
+                <form action="/api/articles/{{ article.id }}/comments" method="post" class="mb-4">
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">
+                            Добавить комментарий
+                        </label>
+                        <textarea class="form-control" id="comment" name="content"
+                                  rows="3" placeholder="Ваш комментарий..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Отправить
+                    </button>
+                </form>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <a href="/login" class="alert-link">Войдите</a> или
+                    <a href="/register" class="alert-link">зарегистрируйтесь</a> чтобы оставить комментарий.
+                </div>
+                {% endif %}
+
+                {% if not comments %}
+                <div class="text-center py-4">
+                    <i class="bi bi-chat-square-text display-1 text-muted"></i>
+                    <p class="text-muted mt-3">Комментариев пока нет. Будьте первым!</p>
+                </div>
+                {% else %}
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment-item border-bottom pb-3 mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                     style="width: 40px; height: 40px;">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">
+                                        {{ comment.author.username if comment.author else 'Аноним' }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                    </small>
+                                </div>
+                                <p class="mb-0">{{ comment.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
