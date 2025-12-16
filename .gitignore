@@ -1,0 +1,15 @@
+# виртуальные окружения
+.venv/
+app/.venv/
+
+# IDE
+.idea/
+
+# кеши Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# логи
+*.log
