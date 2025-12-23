@@ -1,0 +1,17 @@
+# Исключаем служебные папки
+.venv/
+app/.venv/
+.idea/
+__pycache__/
+app/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Исключаем конкретные файлы
+app/models.py
+app/schemas.py
+
+# Исключаем целую папку с шаблонами
+app/templates/
