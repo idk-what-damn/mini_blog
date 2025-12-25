@@ -42,14 +42,7 @@ class ArticleCreate(ArticleBase):
     tag_names: Optional[List[str]] = []
 
 
-class ArticleResponse(ArticleBase):
-    id: int
-    author_id: int
-    created_at: datetime
-    author: Optional[UserResponse] = None
 
-    class Config:
-        from_attributes = True
 
 
 
@@ -83,6 +76,18 @@ class TagResponse(TagBase):
     class Config:
         from_attributes = True
 
+class ArticleResponse(ArticleBase):
+    id: int
+    author_id: int
+    created_at: datetime
+    author: Optional[UserResponse] = None
+    likes_count: int = 0
+    is_liked: bool = False
+    tags: Optional[List[TagResponse]] = []
+
+    class Config:
+        from_attributes = True
+
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -109,3 +114,17 @@ class UserUpdate(BaseModel):
         if v is not None and len(v) < 6:
             raise ValueError("Пароль должен содержать минимум 6 символов")
         return v
+
+class LikeBase(BaseModel):
+    user_id: int
+    article_id: int
+
+class LikeCreate(LikeBase):
+    pass
+
+class LikeResponse(LikeBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

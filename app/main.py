@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request, Form
+from fastapi import FastAPI, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db, engine, Base
-from app.models import User, Article, Comment, Tag
+from app.models import User, Article, Comment, Tag, Like
 from app.schemas import *
-
+from sqlalchemy import and_, func
 
 load_dotenv()
 
@@ -73,14 +73,24 @@ async def home_page(request: Request, db: Session = Depends(get_db)):
 
     articles = db.query(Article).order_by(Article.created_at.desc()).limit(5).all()
 
+    for article in articles:
+        article.author = db.query(User).filter(User.id == article.author.id).first()
+        article.likes_count = db.query(Like).filter(Like.article_id == article.id).count()
+        article.is_liked = False
+        if current_user:
+            existing_like = db.query(Like).filter(and_(Like.user_id == current_user.id, Like.article_id == article.id)).first()
+            article.is_liked = bool(existing_like)
 
     tags = db.query(Tag).limit(10).all()
+
+    total_likes = db.query(Like).count()
 
     return templates.TemplateResponse("index.html", {
         "request": request,
         "current_user": current_user,
         "articles": articles,
-        "tags": tags
+        "tags": tags,
+        "total_likes": total_likes,
     })
 
 
@@ -112,6 +122,7 @@ async def articles_page(
         page: int = 1,
         search: Optional[str] = None,
         tag: Optional[str] = None,
+        sort: Optional[str] = "newest",
         db: Session = Depends(get_db)
 ):
     current_user = await get_current_user(request, db=db)
@@ -130,11 +141,62 @@ async def articles_page(
         if tag_obj:
             query = query.filter(Article.tags.contains(tag_obj))
 
+    if sort == "newest":
+        query = query.order_by(Article.created_at.desc())
+    elif sort == "oldest":
+        query = query.order_by(Article.created_at.asc())
+    elif sort == "popular":
+        articles = query.all()
+        articles_with_likes = []
+        for article in articles:
+            likes_count = db.query(Like).filter(Like.article_id == article.id).count()
+            articles_with_likes.append((article, likes_count))
+
+        articles_with_likes.sort(key=lambda x: x[1], reverse=True)
+
+        sorted_articles = [article for article, likes_count in articles_with_likes]
+
+        total_articles = len(sorted_articles)
+        total_pages = (total_articles + limit - 1) // limit
+
+        paginated_articles = sorted_articles[offset:offset + limit]
+
+        articles = []
+        for article in paginated_articles:
+            article.likes_count = db.query(Like).filter(Like.article_id == article.id).count()
+            article.author = db.query(User).filter(User.id == article.author_id).first()
+            article.is_liked = False
+            if current_user:
+                existing_like = db.query(Like).filter(
+                    and_(Like.user_id == current_user.id, Like.article_id == article.id)).first()
+                article.is_liked = bool(existing_like)
+            articles.append(article)
+
+        tags = db.query(Tag).all()
+
+        return templates.TemplateResponse("articles.html", {
+            "request": request,
+            "current_user": current_user,
+            "articles": articles,
+            "tags": tags,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_query": search,
+            "current_tag": tag,
+            "current_sort": sort
+        })
+
     total_articles = query.count()
-    articles = query.order_by(Article.created_at.desc()).offset(offset).limit(limit).all()
+    articles = query.offset(offset).limit(limit).all()
 
     for article in articles:
         article.author = db.query(User).filter(User.id == article.author_id).first()
+        article.likes_count = db.query(Like).filter(Like.article_id == article.id).count()
+        article.is_liked = False
+        if current_user:
+            existing_like = db.query(Like).filter(
+                and_(Like.user_id == current_user.id, Like.article_id == article.id)).first()
+            article.is_liked = bool(existing_like)
 
     tags = db.query(Tag).all()
 
@@ -148,8 +210,11 @@ async def articles_page(
         "current_page": page,
         "total_pages": total_pages,
         "search_query": search,
-        "current_tag": tag
+        "current_tag": tag,
+        "current_sort": sort
     })
+
+
 
 @app.post("/api/articles")
 async def create_article_api(
@@ -224,11 +289,22 @@ async def article_detail_page(
     for comment in comments:
         comment.author = db.query(User).filter(User.id == comment.author_id).first()
 
+    tags = article.tags if hasattr(article, "tags") else []
+
+    likes_count = db.query(Like).filter(Like.article_id == article.id).count()
+    is_liked = False
+    if  current_user:
+        existing_like = db.query(Like).filter(and_(Like.user_id == current_user.id, Like.article_id == article_id)).first()
+        is_liked = bool(existing_like)
+
     return templates.TemplateResponse("article_detail.html", {
         "request": request,
         "current_user": current_user,
         "article": article,
-        "comments": comments
+        "comments": comments,
+        "tags": tags,
+        "likes_count": likes_count,
+        "is_liked": is_liked
     })
 
 
@@ -320,8 +396,6 @@ async def logout():
     return response
 
 
-
-
 @app.post("/api/articles/{article_id}/comments")
 async def create_comment_api(
         request: Request,
@@ -368,19 +442,6 @@ async def delete_article_api(
     return RedirectResponse("/profile", status_code=303)
 
 
-@app.post("/api/articles/{article_id}/like")
-async def like_article(
-        request: Request,
-        article_id: int,
-        db: Session = Depends(get_db)
-):
-    current_user = await get_current_user(request, db=db)
-    if not current_user:
-        return {"error": "Требуется авторизация"}
-
-    return {"likes": 42}
-
-
 @app.post("/api/profile/update")
 async def update_profile(
         request: Request,
@@ -395,7 +456,6 @@ async def update_profile(
     if not current_user:
         return RedirectResponse("/login", status_code=303)
 
-    # Проверяем текущий пароль
     if not current_user.verify_password(current_password):
         return templates.TemplateResponse("profile.html", {
             "request": request,
@@ -405,7 +465,6 @@ async def update_profile(
         })
 
     try:
-        # Обновляем данные
         if username != current_user.username:
             current_user.username = username
 
@@ -419,7 +478,6 @@ async def update_profile(
 
         db.commit()
 
-        # Если изменилось имя пользователя, обновляем JWT токен
         if username != current_user.username:
             access_token = create_access_token(data={"sub": username})
             response = RedirectResponse("/profile", status_code=303)
@@ -444,6 +502,118 @@ async def update_profile(
             "user_articles": db.query(Article).filter(Article.author_id == current_user.id).all(),
             "error": error_msg
         })
+
+@app.post("/api/articles/{article_id}/like")
+async def like_article(
+        request: Request,
+        article_id: int,
+        db: Session = Depends(get_db)
+):
+    current_user = await get_current_user(request, db=db)
+    if not current_user:
+        return RedirectResponse("/login", status_code=303)
+
+    article = db.query(Article).filter(Article.id == article_id).first()
+
+    if not article:
+        return RedirectResponse(f"/articles/{article_id}", status_code=303)
+
+    existing_like = db.query(Like).filter(and_(Like.user_id == current_user.id, Like.article_id == article_id)).first()
+
+    if existing_like:
+        db.delete(existing_like)
+        db.commit()
+    else:
+        like = Like(user_id=current_user.id, article_id=article_id)
+        db.add(like)
+        db.commit()
+    return RedirectResponse(f"/articles/{article_id}", status_code=303)
+
+
+@app.get("/api/articles/{article_id}/likes/count")
+async def get_article_likes_count(
+        article_id: int,
+        db: Session = Depends(get_db)
+):
+    count = db.query(Like).filter(Like.article_id == article_id).count()
+    return {"likes_count": count}
+
+
+@app.get("/articles/{article_id}/edit")
+async def edit_article_page(
+        request: Request,
+        article_id: int,
+        db: Session = Depends(get_db)
+):
+    current_user = await get_current_user(request, db=db)
+
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+
+    article = db.query(Article).filter(Article.id == article_id).first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+
+    if article.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Недостаточно прав")
+
+    all_tags = db.query(Tag).all()
+
+    return templates.TemplateResponse("edit_article.html", {
+        "request": request,
+        "article": article,
+        "all_tags": all_tags,
+        "current_user": current_user
+    })
+
+
+@app.post("/articles/{article_id}/edit")
+async def edit_article(
+        request: Request,
+        article_id: int,
+        db: Session = Depends(get_db)
+):
+    current_user = await get_current_user(request, db=db)
+
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+
+    form_data = await request.form()
+    title = form_data.get("title")
+    content = form_data.get("content")
+    tag_names = form_data.getlist("tags")
+
+    if not title or not content:
+        raise HTTPException(status_code=400, detail="Заголовок и содержание обязательны")
+
+    article = db.query(Article).filter(Article.id == article_id).first()
+
+    if not article:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+
+    if article.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Недостаточно прав")
+
+    article.title = title
+    article.content = content
+    article.updated_at = datetime.now()
+
+    article.tags.clear()
+
+    for tag_name in tag_names:
+        if tag_name.strip():
+            tag = db.query(Tag).filter(Tag.name == tag_name.strip()).first()
+            if not tag:
+                tag = Tag(name=tag_name.strip())
+                db.add(tag)
+                db.flush()
+            article.tags.append(tag)
+
+    db.commit()
+
+    return RedirectResponse(f"/articles/{article.id}", status_code=303)
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,162 +1,53 @@
-{ % extends
-"base.html" %}
-
-{ % block
-title %}Вход - Мини - Блог
-{ % endblock %}
-
-{ % block
-content %}
-< div
-
-
-class ="row justify-content-center" >
-
-< div
-
-
-class ="col-md-6 col-lg-5" >
-
-< div
-
-
-class ="card shadow-lg" >
-
-< div
-
-
-class ="card-body p-5" >
-
-< h2
-
-
-class ="text-center mb-4" >
-
-< i
-
-
-class ="bi bi-box-arrow-in-right" > < / i > Вход в систему
-
-< / h2 >
-
-{ % if error %}
-< div
-
-
-class ="alert alert-danger alert-dismissible fade show" role="alert" >
-
-< i
-
-
-class ="bi bi-exclamation-triangle" > < / i > {{error}}
-
-< button
-type = "button"
-
-
-class ="btn-close" data-bs-dismiss="alert" > < / button >
-
-< / div >
-{ % endif %}
-
-< form
-action = "/api/login"
-method = "post" >
-< div
-
-
-class ="mb-3" >
-
-< label
-for ="username" class ="form-label" >
-< i
-
-
-class ="bi bi-person" > < / i > Имя пользователя
-
-< / label >
-< input
-type = "text"
-
-
-class ="form-control form-control-lg"
-
-
-id = "username"
-name = "username"
-required
-placeholder = "Введите имя пользователя" >
-< / div >
-
-< div
-
-
-class ="mb-4" >
-
-< label
-for ="password" class ="form-label" >
-< i
-
-
-class ="bi bi-key" > < / i > Пароль
-
-< / label >
-< input
-type = "password"
-
-
-class ="form-control form-control-lg"
-
-
-id = "password"
-name = "password"
-required
-placeholder = "Введите пароль" >
-< / div >
-
-< div
-
-
-class ="d-grid gap-2" >
-
-< button
-type = "submit"
-
-
-class ="btn btn-primary btn-lg" >
-
-< i
-
-
-class ="bi bi-box-arrow-in-right" > < / i > Войти
-
-< / button >
-< / div >
-< / form >
-
-< div
-
-
-class ="text-center mt-4" >
-
-< p
-
-
-class ="text-muted" >
-
-
-Нет
-аккаунта?
-< a
-href = "/register"
-
-
-class ="text-decoration-none" > Зарегистрируйтесь < / a >
-
-< / p >
-< / div >
-< / div >
-< / div >
-< / div >
-< / div >
-{ % endblock %}
+{% extends "base.html" %}
+
+{% block title %}Вход - Мини-Блог{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4">
+                    <i class="bi bi-box-arrow-in-right"></i> Вход в систему
+                </h2>
+
+                {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle"></i> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <form action="/api/login" method="post">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="bi bi-person"></i> Имя пользователя
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="username" name="username" required placeholder="Введите имя пользователя">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">
+                            <i class="bi bi-key"></i> Пароль
+                        </label>
+                        <input type="password" class="form-control form-control-lg" id="password" name="password" required placeholder="Введите пароль">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> Войти
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <p class="text-muted">
+                        Нет аккаунта?
+                        <a href="/register" class="text-decoration-none">Зарегистрируйтесь</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

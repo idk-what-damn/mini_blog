@@ -19,6 +19,12 @@
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
+                    {% if current_sort %}
+                    <input type="hidden" name="sort" value="{{ current_sort }}">
+                    {% endif %}
+                    {% if current_tag %}
+                    <input type="hidden" name="tag" value="{{ current_tag }}">
+                    {% endif %}
                 </form>
 
                 {% if tags %}
@@ -26,26 +32,34 @@
                     <i class="bi bi-tags"></i> Теги
                 </h6>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="/articles" class="badge {% if not current_tag %}bg-primary{% else %}bg-secondary{% endif %}">
+                    <a href="/articles{% if current_sort and current_sort != 'newest' %}?sort={{ current_sort }}{% endif %}"
+                       class="badge {% if not current_tag %}bg-primary{% else %}bg-secondary{% endif %}">
                         Все
                     </a>
                     {% for tag in tags %}
-                    <a href="/articles?tag={{ tag.name }}"
+                    <a href="/articles?tag={{ tag.name }}{% if current_sort and current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}"
                        class="badge {% if current_tag == tag.name %}bg-primary{% else %}bg-info{% endif %}">
                         {{ tag.name }}
                     </a>
                     {% endfor %}
                 </div>
                 {% endif %}
+
                 <h6 class="mt-4">
                     <i class="bi bi-sort-down"></i> Сортировка
                 </h6>
                 <div class="list-group">
-                    <a href="/articles?sort=newest" class="list-group-item list-group-item-action">
+                    <a href="/articles?sort=newest{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                       class="list-group-item list-group-item-action {% if current_sort == 'newest' or not current_sort %}active{% endif %}">
                         Сначала новые
                     </a>
-                    <a href="/articles?sort=oldest" class="list-group-item list-group-item-action">
+                    <a href="/articles?sort=oldest{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                       class="list-group-item list-group-item-action {% if current_sort == 'oldest' %}active{% endif %}">
                         Сначала старые
+                    </a>
+                    <a href="/articles?sort=popular{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+                       class="list-group-item list-group-item-action {% if current_sort == 'popular' %}active{% endif %}">
+                        По популярности (лайкам)
                     </a>
                 </div>
             </div>
@@ -61,6 +75,20 @@
                 <i class="bi bi-tag"></i> Тег: {{ current_tag }}
                 {% else %}
                 <i class="bi bi-newspaper"></i> Все статьи
+                {% endif %}
+
+                <!-- ИСПРАВЛЕННЫЙ БЛОК - ДОБАВЛЕНА СОРТИРОВКА "СНАЧАЛА НОВЫЕ" -->
+                {% if current_sort %}
+                    {% if current_sort == 'newest' %}
+                    <span class="badge bg-info ms-2">Сначала новые</span>
+                    {% elif current_sort == 'oldest' %}
+                    <span class="badge bg-info ms-2">Сначала старые</span>
+                    {% elif current_sort == 'popular' %}
+                    <span class="badge bg-info ms-2">По популярности</span>
+                    {% endif %}
+                {% else %}
+                    <!-- Если сортировка не выбрана (значение по умолчанию) -->
+                    <span class="badge bg-info ms-2">Сначала новые</span>
                 {% endif %}
             </h1>
             {% if current_user %}
@@ -110,9 +138,25 @@
                                 <i class="bi bi-person text-primary me-1"></i>
                                 <small class="text-muted">{{ article.author.username if article.author else 'Неизвестный автор' }}</small>
                             </div>
-                            <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center me-3">
                                 <i class="bi bi-calendar text-success me-1"></i>
                                 <small class="text-muted">{{ article.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                {% if current_user %}
+                                <form action="/api/articles/{{ article.id }}/like" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm p-0 border-0">
+                                        {% if article.is_liked %}
+                                        <i class="bi bi-heart-fill text-danger"></i>
+                                        {% else %}
+                                        <i class="bi bi-heart text-muted"></i>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                                {% else %}
+                                <i class="bi bi-heart text-muted"></i>
+                                {% endif %}
+                                <small class="text-muted ms-1">{{ article.likes_count or 0 }}</small>
                             </div>
                         </div>
                     </div>
@@ -121,7 +165,8 @@
                         {% if article.tags %}
                         <div class="d-flex flex-wrap gap-2 mb-3">
                             {% for tag in article.tags[:3] %}
-                            <a href="/articles?tag={{ tag.name }}" class="badge bg-secondary text-decoration-none">
+                            <a href="/articles?tag={{ tag.name }}{% if current_sort and current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}"
+                               class="badge bg-secondary text-decoration-none">
                                 {{ tag.name }}
                             </a>
                             {% endfor %}
@@ -131,10 +176,35 @@
                         </div>
                         {% endif %}
 
-                        <div class="d-flex justify-content-end">
-                            <a href="/articles/{{ article.id }}" class="btn btn-outline-primary btn-sm">
+                        <div class="d-flex justify-content-end align-items-center">
+                            <div class="me-3">
+                                {% if current_user %}
+                                <form action="/api/articles/{{ article.id }}/like" method="post" class="d-inline">
+                                    <button type="submit" class="btn {% if article.is_liked %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">
+                                        {% if article.is_liked %}
+                                        <i class="bi bi-heart-fill"></i>
+                                        {% else %}
+                                        <i class="bi bi-heart"></i>
+                                        {% endif %}
+                                        <span>{{ article.likes_count or 0 }}</span>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <a href="/login" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-heart"></i>
+                                    <span>{{ article.likes_count or 0 }}</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                            <a href="/articles/{{ article.id }}" class="btn btn-outline-primary btn-sm me-2">
                                 Читать <i class="bi bi-arrow-right"></i>
                             </a>
+
+                            {% if current_user and current_user.id == article.author_id %}
+                            <a href="/articles/{{ article.id }}/edit" class="btn btn-warning btn-sm">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -147,7 +217,7 @@
             <ul class="pagination justify-content-center">
                 {% if current_page > 1 %}
                 <li class="page-item">
-                    <a class="page-link" href="/articles?page={{ current_page - 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}">
+                    <a class="page-link" href="/articles?page={{ current_page - 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if current_sort and current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}">
                         <i class="bi bi-chevron-left"></i> Назад
                     </a>
                 </li>
@@ -160,17 +230,16 @@
                     </li>
                     {% else %}
                     <li class="page-item">
-                        <a class="page-link" href="/articles?page={{ page_num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}">
+                        <a class="page-link" href="/articles?page={{ page_num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if current_sort and current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}">
                             {{ page_num }}
                         </a>
                     </li>
                     {% endif %}
                 {% endfor %}
 
-
                 {% if current_page < total_pages %}
                 <li class="page-item">
-                    <a class="page-link" href="/articles?page={{ current_page + 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}">
+                    <a class="page-link" href="/articles?page={{ current_page + 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if current_sort and current_sort != 'newest' %}&sort={{ current_sort }}{% endif %}">
                         Вперед <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from passlib.context import CryptContext
@@ -10,6 +10,7 @@ pwd_context = CryptContext(
     schemes=["sha256_crypt"],
     deprecated="auto"
 )
+
 article_tags = Table('article_tags', Base.metadata,
                      Column('article_id', Integer, ForeignKey('articles.id')),
                      Column('tag_id', Integer, ForeignKey('tags.id'))
@@ -29,6 +30,7 @@ class User(Base):
 
     articles = relationship("Article", back_populates="author")
     comments = relationship("Comment", back_populates="author")
+    likes = relationship("Like")
 
     @validates('username')
     def validate_username(self, key, username):
@@ -53,6 +55,21 @@ class User(Base):
     def verify_password(self, password: str) -> bool:
         return pwd_context.verify(password, self.hashed_password)
 
+class Like(Base):
+    __tablename__ = "likes"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'article_id', name='unique_user_article_like'),
+    )
+    user = relationship("User", foreign_keys=[user_id])
+    article = relationship("Article", foreign_keys=[article_id])
+    liked_article = relationship("Article", back_populates="likes")
+
+
 class Article(Base):
     __tablename__ = "articles"
 
@@ -65,6 +82,15 @@ class Article(Base):
     author = relationship("User", back_populates="articles")
     comments = relationship("Comment", back_populates="article")
     tags = relationship("Tag", secondary=article_tags, back_populates="articles")
+    likes = relationship("Like")
+    @property
+    def like_count(self):
+        return len(self.likes) if self.likes else 0
+
+    def is_liked_by(self, user_id: int) -> bool:
+        if not self.likes:
+            return False
+        return any(like.user_id == user_id for like in self.likes)
 
 
 class Comment(Base):
@@ -87,3 +113,5 @@ class Tag(Base):
     name = Column(String, unique=True, nullable=False)
 
     articles = relationship("Article", secondary=article_tags, back_populates="tags")
+
+

@@ -9,9 +9,3 @@ app/__pycache__/
 *.pyd
 *.log
 
-# Исключаем конкретные файлы
-app/models.py
-app/schemas.py
-
-# Исключаем целую папку с шаблонами
-app/templates/
